@@ -45,7 +45,7 @@ field z = accessor z (getFld z) (setFld z)
 
 data R a = MkR { _foo :: a -> a }
 data S   = MkS { _bar :: forall b. b -> b }
-data T a = MkT { x :: [a] }
+data T a = MkT { _x :: [a] }
 data U a = MkU { _foo' :: R a, _bar' :: a }
 data V   = MkV { _foo'' :: Int }
 
@@ -60,7 +60,7 @@ instance (b' ~ (b -> b)) => Set (R a) "foo" b' where
   setFld _ (MkR _) x = MkR x
 
 type instance GetResult (T a) "x" = [a]
-instance (b ~ [a]) => Get (T a) "x" b where
+instance (b ~ GetResult (T a) "x") => Get (T a) "x" b where
   getFld _ (MkT x) = x
 
 type instance SetResult (T a) "x" [c] = T c
@@ -106,6 +106,8 @@ foo = field (Proxy :: Proxy "foo")
 bar :: (Get r "bar" t, Accessor p "bar") => p r t
 bar = field (Proxy :: Proxy "bar")
 
+x :: (Get r "x" t, Accessor p "x") => p r t
+x = field (Proxy :: Proxy "x")
 
 -- We can compose polymorphic fields:
 
