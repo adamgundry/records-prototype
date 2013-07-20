@@ -8,7 +8,7 @@
 {-# LANGUAGE KindSignatures, DataKinds, MultiParamTypeClasses,
              TypeFamilies, RankNTypes, FlexibleInstances, 
              UndecidableInstances, PolyKinds, FlexibleContexts,
-             NoMonomorphismRestriction #-}
+             NoMonomorphismRestriction, TypeOperators #-}
 
 module RecordsPrototype where
 
@@ -135,15 +135,83 @@ foo_is_a_lens :: (Get r "foo" t, Set r "foo" b) =>
 foo_is_a_lens = fieldLens foo
 
 
--- Just for good measure, here's another style of lens that can also
--- be an Accessor:
+-- What if our lenses don't support type-changing update?  No problem!
+-- Here is the relevant class (the dependency on the field name has
+-- gone, of course).  This could replace `Accessor` entirely if we
+-- wanted to drop support for type-changing update.
 
-data DataLens f r a = DataLens
-    { getDL :: r -> a
-    , setDL :: forall b . Set r f b => r -> b -> SetResult r f b }
+class UniformAccessor h where
+  uniformAccessor :: (r -> a) -> (r -> a -> r) -> h r a
 
-instance f ~ g => Accessor (DataLens f) g where
-  accessor _ = DataLens
+instance UniformAccessor (->) where
+  uniformAccessor getter setter = getter
+
+
+-- If `h` is a uniform lens type, then `Wrap h f` is a normal `Accessor`,
+-- wrapping up a proof that the record type doesn't change.
+
+newtype Wrap h f r a = MkWrap
+    { uniformField :: (Set r f a, SetResult r f a ~ r) => h r a }
+
+instance (f ~ g, UniformAccessor h) => Accessor (Wrap h f) g where
+  accessor _ getter setter = MkWrap (uniformAccessor getter setter)
+
+
+-- Now simple lenses are uniform accessors:
+
+newtype SimpleLens r a = MkSimpleLens (Lens r r a a)
+
+instance UniformAccessor SimpleLens where
+  uniformAccessor getter setter =
+    MkSimpleLens (\ w s -> setter s <$> w (getter s))
+
+-- And `uniformField` turns a field into a simple lens:
+
+type Field h = (Set r f a, r ~ SetResult r f a) => Wrap h f r a -> h r a
+
+fieldSimpleLens :: Field SimpleLens
+fieldSimpleLens = uniformField
+
+
+-- data-lens (ish)
+
+data DataLens r a = DataLens
+   { getRDL :: r -> a
+   , setRDL :: r -> a -> r }
+
+instance UniformAccessor DataLens where
+  uniformAccessor = DataLens
+
+fieldDataLens :: Field DataLens
+fieldDataLens = uniformField
+
+
+-- fclabels
+
+data Point arr f i o = Point
+  { _get :: f `arr` o
+  , _set :: (i, f) `arr` f
+  }
+
+newtype FCLens arr f a = FCLens { unLens :: Point arr f a a }
+
+instance UniformAccessor (FCLens (->)) where
+  uniformAccessor getter setter =
+      FCLens (Point getter (uncurry $ flip setter))
+
+fieldFCLens :: Field (FCLens (->))
+fieldFCLens = uniformField
+
+
+-- data-accessor
+
+newtype DataAccessor r a = Cons {decons :: r -> (a, a -> r)}
+
+instance UniformAccessor DataAccessor where
+  uniformAccessor getter setter = Cons (\ r -> (getter r, setter r))
+
+fieldDataAccessor :: Field DataAccessor
+fieldDataAccessor = uniformField
 
 
 -- Oh, I almost forgot, we need proxy types until explicit type
