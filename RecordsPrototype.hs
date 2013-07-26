@@ -50,7 +50,7 @@ data R a = MkR { _foo :: a -> a }
 data S   = MkS { _bar :: forall b. b -> b }
 data T a = MkT { _x :: [a] }
 data U a = MkU { _foo' :: R a, _bar' :: a }
-data V   = MkV { _foo'' :: Int }
+data V k = MkV { _foo'' :: Int, _bar'' :: k Int }
 
 -- ...lead to automatic generation of the following instances...
 
@@ -63,7 +63,7 @@ instance (t ~ (b -> b)) => Set (R a) "foo" t where
   setFld _ (MkR _) x = MkR x
 
 type instance GetResult (T a) "x" = [a]
-instance (t ~ GetResult (T a) "x") => Get (T a) "x" t where
+instance (t ~ [a]) => Get (T a) "x" t where
   getFld _ (MkT x) = x
 
 type instance SetResult (T a) "x" [c] = T c
@@ -86,13 +86,22 @@ type instance SetResult (U a) "bar" c = U c
 instance t ~ a => Set (U a) "bar" t where
   setFld _ (MkU x _) y = MkU x y
 
-type instance GetResult V "foo" = Int
-instance t ~ Int => Get V "foo" t where
-  getFld _ (MkV x) = x
+type instance GetResult (V k) "foo" = Int
+instance t ~ Int => Get (V k) "foo" t where
+  getFld _ (MkV x _) = x
 
-type instance SetResult V "foo" Int = V
-instance t ~ Int => Set V "foo" t where
-  setFld _ (MkV _) x = MkV x
+type instance SetResult (V k) "foo" Int = V k
+instance t ~ Int => Set (V k) "foo" t where
+  setFld _ (MkV _ y) x = MkV x y
+
+type instance GetResult (V k) "bar" = k Int
+instance t ~ k Int => Get (V k) "bar" t where
+  getFld _ (MkV _ y) = y
+
+type instance SetResult (V k) "bar" (l Int) = V l
+instance t ~ l Int => Set (V k) "bar" t where
+  setFld _ (MkV x _) y = MkV x y
+
 
 
 -- Note that:

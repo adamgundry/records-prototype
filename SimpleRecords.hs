@@ -44,7 +44,7 @@ data R a = MkR { _foo :: a -> a }
 data S   = MkS { _bar :: forall b. b -> b }
 data T a = MkT { _x :: [a] }
 data U a = MkU { _foo' :: R a, _bar' :: a }
-data V   = MkV { _foo'' :: Int }
+data V k = MkV { _foo'' :: Int, _bar'' :: k Int }
 
 -- ...lead to automatic generation of the following instances...
 
@@ -54,7 +54,7 @@ instance t ~ (a -> a) => Get (R a) "foo" t where
   setFld _ (MkR _) x = MkR x
 
 type instance GetResult (T a) "x" = [a]
-instance (b ~ GetResult (T a) "x") => Get (T a) "x" b where
+instance (b ~ [a]) => Get (T a) "x" b where
   getFld _ (MkT x) = x
   setFld _ (MkT _) y = MkT y
 
@@ -68,10 +68,15 @@ instance t ~ a => Get (U a) "bar" t where
   getFld _ (MkU _ y) = y
   setFld _ (MkU x _) y = MkU x y
 
-type instance GetResult V "foo" = Int
-instance t ~ Int => Get V "foo" t where
-  getFld _ (MkV x) = x
-  setFld _ (MkV _) x = MkV x
+type instance GetResult (V k) "foo" = Int
+instance t ~ Int => Get (V k) "foo" t where
+  getFld _ (MkV x _) = x
+  setFld _ (MkV _ y) x = MkV x y
+
+type instance GetResult (V k) "bar" = k Int
+instance t ~ k Int => Get (V k) "bar" t where
+  getFld _ (MkV _ y) = y
+  setFld _ (MkV x _) y = MkV x y
 
 
 -- Note that there are no instances for bar from S, because it is
