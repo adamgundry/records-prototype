@@ -23,7 +23,8 @@ import GHC.TypeLits
 -- for Accessor (->) and the definition of `field` go in base:
 
 type family GetResult (r :: *) (f :: Symbol) :: *
-class t ~ GetResult r f => Get r (f :: Symbol) t where
+class (t ~ GetResult r f, r ~ SetResult r f t) =>
+          Get r (f :: Symbol) t where
   getFld :: proxy f -> r -> t
 
 type family SetResult (r :: *) (f :: Symbol) (a :: *) :: *  
