@@ -11,7 +11,7 @@
 {-# LANGUAGE KindSignatures, DataKinds, MultiParamTypeClasses,
              TypeFamilies, RankNTypes, FlexibleInstances, 
              UndecidableInstances, PolyKinds, FlexibleContexts,
-             NoMonomorphismRestriction, TypeOperators #-}
+             NoMonomorphismRestriction, TypeOperators, GADTs #-}
 
 module RecordsPrototype where
 
@@ -51,6 +51,9 @@ data S   = MkS { _bar :: forall b. b -> b }
 data T a = MkT { _x :: [a] }
 data U a = MkU { _foo' :: R a, _bar' :: a }
 data V k = MkV { _foo'' :: Int, _bar'' :: k Int }
+data W a where
+    MkW :: (a ~ b, Ord a) => { gaa :: a, gab :: b } -> W (a, b)
+
 
 -- ...lead to automatic generation of the following instances...
 
@@ -102,6 +105,21 @@ type instance SetResult (V k) "bar" (l Int) = V l
 instance t ~ l Int => Set (V k) "bar" t where
   setFld _ (MkV x _) y = MkV x y
 
+type instance GetResult (W (a, b)) "gaa" = a
+instance (t ~ a, c ~ (a, b)) => Get (W c) "gaa" t where
+  getFld _ (MkW gaa _)   = gaa
+
+type instance SetResult (W (a, b)) "gaa" c = W (c, b)
+instance (t ~ a, c ~ (a, b)) => Set (W c) "gaa" t where
+  setFld _ (MkW _ gab) gaa = MkW gaa gab
+
+type instance GetResult (W (a, b)) "gab" = b
+instance (t ~ b, c ~ (a, b)) => Get (W c) "gab" t where
+  getFld _ (MkW _ gab) = gab
+
+type instance SetResult (W (a, b)) "gab" c = W (a, c)
+instance (t ~ a, c ~ (a, b)) => Set (W c) "gab" t where
+  setFld _ (MkW gaa _) gab = MkW gaa gab
 
 
 -- Note that:

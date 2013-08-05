@@ -11,7 +11,7 @@
 {-# LANGUAGE KindSignatures, DataKinds, MultiParamTypeClasses,
              TypeFamilies, RankNTypes, FlexibleInstances, 
              UndecidableInstances, PolyKinds, FlexibleContexts,
-             NoMonomorphismRestriction, TypeOperators #-}
+             NoMonomorphismRestriction, TypeOperators, GADTs #-}
 
 module SimpleRecords where
 
@@ -45,6 +45,8 @@ data S   = MkS { _bar :: forall b. b -> b }
 data T a = MkT { _x :: [a] }
 data U a = MkU { _foo' :: R a, _bar' :: a }
 data V k = MkV { _foo'' :: Int, _bar'' :: k Int }
+data W a where
+    MkW :: (a ~ b, Ord a) => { gaa :: a, gab :: b } -> W (a, b)
 
 -- ...lead to automatic generation of the following instances...
 
@@ -77,6 +79,16 @@ type instance GetResult (V k) "bar" = k Int
 instance t ~ k Int => Get (V k) "bar" t where
   getFld _ (MkV _ y) = y
   setFld _ (MkV x _) y = MkV x y
+
+type instance GetResult (W (a, b)) "gaa" = a
+instance t ~ a => Get (W (a, b)) "gaa" t where
+  getFld _ (MkW gaa _)   = gaa
+  setFld _ (MkW _ gab) gaa = MkW gaa gab
+
+type instance GetResult (W (a, b)) "gab" = b
+instance (t ~ b, c ~ (a, b)) => Get (W c) "gab" t where
+  getFld _ (MkW _ gab) = gab
+  setFld _ (MkW gaa _) gab = MkW gaa gab
 
 
 -- Note that there are no instances for bar from S, because it is
