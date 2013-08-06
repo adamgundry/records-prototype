@@ -28,7 +28,7 @@ class (t ~ GetResult r f, r ~ SetResult r f t) =>
   getFld :: proxy f -> r -> t
 
 type family SetResult (r :: *) (f :: Symbol) (a :: *) :: *  
-class Set (r :: *) (f :: Symbol) (a :: *) where
+class Get r f (GetResult r f) => Set (r :: *) (f :: Symbol) (a :: *) where
   setFld :: proxy f -> r -> a -> SetResult r f a
 
 
@@ -162,8 +162,8 @@ fieldLens :: Set r f b => WrapLens f r a -> Lens r (SetResult r f b) a b
 fieldLens (MkWrapLens l) = l
 
 
-foo_is_a_lens :: (Get r "foo" t, Set r "foo" b) =>
-                 Lens r (SetResult r "foo" b) t b
+foo_is_a_lens :: Set r "foo" b =>
+                 Lens r (SetResult r "foo" b) (GetResult r "foo") b
 foo_is_a_lens = fieldLens foo
 
 
