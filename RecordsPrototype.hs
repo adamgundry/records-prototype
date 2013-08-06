@@ -54,7 +54,7 @@ data U a = MkU { _foo' :: R a, _bar' :: a }
 data V k = MkV { _foo'' :: Int, _bar'' :: k Int }
 data W a where
     MkW :: (a ~ b, Ord a) => { gaa :: a, gab :: b } -> W (a, b)
-
+data X a = MkX { _foo''' :: Bool }
 
 -- ...lead to automatic generation of the following instances...
 
@@ -122,11 +122,21 @@ type instance SetResult (W (a, b)) "gab" c = W (a, c)
 instance (t ~ a, c ~ (a, b)) => Set (W c) "gab" t where
   setFld _ (MkW gaa _) gab = MkW gaa gab
 
+type instance GetResult (X a) "foo" = Bool
+instance t ~ Bool => Get (X a) "foo" t where
+  getFld _ (MkX x) = x
+
+type instance SetResult (X a) "foo" Bool = X a
+instance t ~ Bool => Set (X a) "foo" t where
+  setFld _ (MkX _ ) x = MkX x
+
 
 -- Note that:
 --  * there are no instances for bar from S, because it is higher rank;
 --  * the Set instances for U do not support type-changing update,
 --      because its fields cannot be updated individually.
+--  * similarly X does not support type-changing update, because it
+--      has a phantom type variable.
 
 
 -- These function declarations approximate how uses of the fields
