@@ -21,8 +21,9 @@ import GHC.TypeLits
 -- These class and type family declarations go in base:
 
 type family GetResult (r :: *) (f :: Symbol) :: *
-class t ~ GetResult r f => Get r (f :: Symbol) t where
-  getFld :: proxy f -> r -> t
+
+class t ~ GetResult r f => Has r (f :: Symbol) t where
+  getField :: proxy f -> r -> t
 
 
 -- Some example datatypes...
@@ -36,28 +37,28 @@ data V k = MkV { _foo'' :: Int, _bar'' :: k Int }
 -- ...lead to automatic generation of the following instances...
 
 type instance GetResult (R a) "foo" = a -> a
-instance t ~ (a -> a) => Get (R a) "foo" t where
-  getFld _ (MkR x) = x
+instance t ~ (a -> a) => Has (R a) "foo" t where
+  getField _ (MkR x) = x
 
 type instance GetResult (T a) "x" = [a]
-instance (b ~ [a]) => Get (T a) "x" b where
-  getFld _ (MkT x) = x
+instance (b ~ [a]) => Has (T a) "x" b where
+  getField _ (MkT x) = x
 
 type instance GetResult (U a) "foo" = R a
-instance t ~ R a => Get (U a) "foo" t where
-  getFld _ (MkU x _) = x
+instance t ~ R a => Has (U a) "foo" t where
+  getField _ (MkU x _) = x
 
 type instance GetResult (U a) "bar" = a
-instance t ~ a => Get (U a) "bar" t where
-  getFld _ (MkU _ y) = y
+instance t ~ a => Has (U a) "bar" t where
+  getField _ (MkU _ y) = y
 
 type instance GetResult (V k) "foo" = Int
-instance t ~ Int => Get (V k) "foo" t where
-  getFld _ (MkV x _) = x
+instance t ~ Int => Has (V k) "foo" t where
+  getField _ (MkV x _) = x
 
 type instance GetResult (V k) "bar" = k Int
-instance t ~ k Int => Get (V k) "bar" t where
-  getFld _ (MkV _ y) = y
+instance t ~ k Int => Has (V k) "bar" t where
+  getField _ (MkV _ y) = y
 
 
 -- Note that there are no instances for bar from S, because it is
@@ -67,14 +68,14 @@ instance t ~ k Int => Get (V k) "bar" t where
 -- These function declarations approximate how uses of the fields
 -- would be handled by the typechecker:
 
-foo :: Get r "foo" t => r -> t
-foo = getFld (Proxy :: Proxy "foo")
+foo :: Has r "foo" t => r -> t
+foo = getField (Proxy :: Proxy "foo")
 
-bar :: Get r "bar" t => r -> t
-bar = getFld (Proxy :: Proxy "bar")
+bar :: Has r "bar" t => r -> t
+bar = getField (Proxy :: Proxy "bar")
 
-x :: Get r "x" t => r -> t
-x = getFld (Proxy :: Proxy "x")
+x :: Has r "x" t => r -> t
+x = getField (Proxy :: Proxy "x")
 
 -- We can compose polymorphic fields:
 

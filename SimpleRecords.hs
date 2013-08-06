@@ -23,9 +23,10 @@ import GHC.TypeLits
 -- for SimpleAccessor (->) and the definition of `field` go in base:
 
 type family GetResult (r :: *) (f :: Symbol) :: *
-class t ~ GetResult r f => Get r (f :: Symbol) t where
-  getFld :: proxy f -> r -> t
-  setFld :: proxy f -> r -> t -> r
+
+class t ~ GetResult r f => Has r (f :: Symbol) t where
+  getField :: proxy f -> r -> t
+  setField :: proxy f -> r -> t -> r
 
 class SimpleAccessor (p :: * -> * -> *) where
   simpleAccessor :: (r -> t) -> (r -> t -> r) -> p r t
@@ -34,8 +35,8 @@ instance SimpleAccessor (->) where
   simpleAccessor getter setter = getter
 
 
-field :: (Get r f t, SimpleAccessor p) => proxy f -> p r t
-field z = simpleAccessor (getFld z) (setFld z)
+field :: (Has r f t, SimpleAccessor p) => proxy f -> p r t
+field z = simpleAccessor (getField z) (setField z)
 
 
 -- Some example datatypes...
@@ -51,44 +52,44 @@ data W a where
 -- ...lead to automatic generation of the following instances...
 
 type instance GetResult (R a) "foo" = a -> a
-instance t ~ (a -> a) => Get (R a) "foo" t where
-  getFld _ (MkR x) = x
-  setFld _ (MkR _) x = MkR x
+instance t ~ (a -> a) => Has (R a) "foo" t where
+  getField _ (MkR x) = x
+  setField _ (MkR _) x = MkR x
 
 type instance GetResult (T a) "x" = [a]
-instance (b ~ [a]) => Get (T a) "x" b where
-  getFld _ (MkT x) = x
-  setFld _ (MkT _) y = MkT y
+instance (b ~ [a]) => Has (T a) "x" b where
+  getField _ (MkT x) = x
+  setField _ (MkT _) y = MkT y
 
 type instance GetResult (U a) "foo" = R a
-instance t ~ R a => Get (U a) "foo" t where
-  getFld _ (MkU x _) = x
-  setFld _ (MkU _ y) x = MkU x y
+instance t ~ R a => Has (U a) "foo" t where
+  getField _ (MkU x _) = x
+  setField _ (MkU _ y) x = MkU x y
 
 type instance GetResult (U a) "bar" = a
-instance t ~ a => Get (U a) "bar" t where
-  getFld _ (MkU _ y) = y
-  setFld _ (MkU x _) y = MkU x y
+instance t ~ a => Has (U a) "bar" t where
+  getField _ (MkU _ y) = y
+  setField _ (MkU x _) y = MkU x y
 
 type instance GetResult (V k) "foo" = Int
-instance t ~ Int => Get (V k) "foo" t where
-  getFld _ (MkV x _) = x
-  setFld _ (MkV _ y) x = MkV x y
+instance t ~ Int => Has (V k) "foo" t where
+  getField _ (MkV x _) = x
+  setField _ (MkV _ y) x = MkV x y
 
 type instance GetResult (V k) "bar" = k Int
-instance t ~ k Int => Get (V k) "bar" t where
-  getFld _ (MkV _ y) = y
-  setFld _ (MkV x _) y = MkV x y
+instance t ~ k Int => Has (V k) "bar" t where
+  getField _ (MkV _ y) = y
+  setField _ (MkV x _) y = MkV x y
 
 type instance GetResult (W (a, b)) "gaa" = a
-instance t ~ a => Get (W (a, b)) "gaa" t where
-  getFld _ (MkW gaa _)   = gaa
-  setFld _ (MkW _ gab) gaa = MkW gaa gab
+instance t ~ a => Has (W (a, b)) "gaa" t where
+  getField _ (MkW gaa _)   = gaa
+  setField _ (MkW _ gab) gaa = MkW gaa gab
 
 type instance GetResult (W (a, b)) "gab" = b
-instance (t ~ b, c ~ (a, b)) => Get (W c) "gab" t where
-  getFld _ (MkW _ gab) = gab
-  setFld _ (MkW gaa _) gab = MkW gaa gab
+instance (t ~ b, c ~ (a, b)) => Has (W c) "gab" t where
+  getField _ (MkW _ gab) = gab
+  setField _ (MkW gaa _) gab = MkW gaa gab
 
 
 -- Note that there are no instances for bar from S, because it is
@@ -98,13 +99,13 @@ instance (t ~ b, c ~ (a, b)) => Get (W c) "gab" t where
 -- These function declarations approximate how uses of the fields
 -- would be handled by the typechecker:
 
-foo :: (Get r "foo" t, SimpleAccessor p) => p r t
+foo :: (Has r "foo" t, SimpleAccessor p) => p r t
 foo = field (Proxy :: Proxy "foo")
 
-bar :: (Get r "bar" t, SimpleAccessor p) => p r t
+bar :: (Has r "bar" t, SimpleAccessor p) => p r t
 bar = field (Proxy :: Proxy "bar")
 
-x :: (Get r "x" t, SimpleAccessor p) => p r t
+x :: (Has r "x" t, SimpleAccessor p) => p r t
 x = field (Proxy :: Proxy "x")
 
 -- We can compose polymorphic fields:
@@ -127,7 +128,7 @@ instance SimpleAccessor SimpleLens where
 fieldSimpleLens :: SimpleLens r a -> Lens r r a a
 fieldSimpleLens (MkSimpleLens l) = l
 
-foo_is_a_lens :: Get r "foo" t => Lens r r t t
+foo_is_a_lens :: Has r "foo" t => Lens r r t t
 foo_is_a_lens = fieldSimpleLens foo
 
 
