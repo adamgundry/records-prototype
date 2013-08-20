@@ -24,16 +24,14 @@ import GHC.TypeLits
 
 type family GetResult (r :: *) (f :: Symbol) :: *
 
-class (t ~ GetResult r f, r ~ SetResult r f t) =>
-          Has r (f :: Symbol) t where
+class t ~ GetResult r f => Has r (f :: Symbol) t where
   getField :: proxy f -> r -> t
 
 type family SetResult (r :: *) (f :: Symbol) (a :: *) :: *  
 
-class Has r f (GetResult r f) =>
+class (Has r f (GetResult r f), r ~ SetResult r f (GetResult r f)) =>
           Upd (r :: *) (f :: Symbol) (a :: *) where
   setField :: proxy f -> r -> a -> SetResult r f a
-
 
 class Accessor (p :: * -> * -> *) (f :: Symbol) where
   accessor :: proxy f -> (r -> GetResult r f) ->
