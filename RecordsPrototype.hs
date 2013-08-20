@@ -59,6 +59,9 @@ data W a where
     MkW :: (a ~ b, Ord a) => { gaa :: a, gab :: b } -> W (a, b)
 data X a = MkX { _foo''' :: Bool }
 
+data family F (a :: *)
+data instance F Int = MkF { _foo'''' :: Int }
+
 -- ...lead to automatic generation of the following instances...
 
 type instance GetResult (R a) "foo" = a -> a
@@ -133,6 +136,13 @@ type instance SetResult (X a) "foo" Bool = X a
 instance t ~ Bool => Upd (X a) "foo" t where
   setField _ (MkX _ ) x = MkX x
 
+type instance GetResult (F Int) "foo" = Int
+instance t ~ Int => Has (F Int) "foo" t where
+  getField _ (MkF x) = x
+
+type instance SetResult (F Int) "foo" Int = F Int
+instance t ~ Int => Upd (F Int) "foo" t where
+  setField _ (MkF _) x = MkF x
 
 -- Note that:
 --  * there are no instances for bar from S, because it is higher rank;
