@@ -77,6 +77,11 @@ bar = getField (Proxy :: Proxy "bar")
 x :: Has r "x" t => r -> t
 x = getField (Proxy :: Proxy "x")
 
+
+-- We can use fields:
+
+t = foo (MkR not) False
+
 -- We can compose polymorphic fields:
 
 fooBar = foo . bar

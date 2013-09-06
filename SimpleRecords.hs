@@ -108,6 +108,11 @@ bar = field (Proxy :: Proxy "bar")
 x :: (Has r "x" t, SimpleAccessor p) => p r t
 x = field (Proxy :: Proxy "x")
 
+
+-- We can use fields:
+
+t = foo (MkR not) False
+
 -- We can compose polymorphic fields:
 
 fooBar = foo . bar
