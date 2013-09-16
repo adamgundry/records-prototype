@@ -150,6 +150,20 @@ instance t ~ Int => Upd (F Int) "foo" t where
 --      has a phantom type variable.
 
 
+data FC (f :: y -> *)(g :: x -> y)(a :: x) :: * where
+   FC :: { runFC :: f (g a) } -> FC f g a
+
+type instance GetResult (FC f g a) "runFC" = f (g a)
+type instance SetResult (FC f (g :: x -> y) a) "runFC" (f' ((g' :: x -> y) a')) = FC f' g' a'
+
+instance t ~ f (g a) => Has (FC f g a) "runFC" t where
+  getField _ (FC x) = x
+
+instance forall (f :: y -> *)(f' :: y -> *)(g :: x -> y)(g' :: x -> y)(a :: x)(a' :: x)(b :: *) .
+            b ~ f' (g' a') => Upd (FC f g a) "runFC" b where
+  setField _ (FC _) x = FC x
+
+
 -- These function declarations approximate how uses of the fields
 -- would be handled by the typechecker:
 
