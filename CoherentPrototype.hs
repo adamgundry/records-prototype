@@ -76,14 +76,14 @@ type family FromArrow (a :: *) :: Bool where
   FromArrow (x -> y) = True
   FromArrow t        = False
 
-class z ~ FromArrow x => IsRecordFunction (n :: Symbol) x y (z :: Bool) | n x z -> y where
+class z ~ FromArrow x => IsRecordFunction (n :: Symbol) x y (z :: Bool) | n x -> y where
   fieldFunction :: proxy n -> x -> y
 
 instance IsRecordFunction n x y (FromArrow x) => IsRecordField n (x -> y) where
   field = fieldFunction
 
-instance (Functor f, Has r n, Upd r n b, a ~ FldTy r n, r' ~ UpdTy r n b)
-           => IsRecordFunction n (a -> f b) (r -> f r') True where
+instance (Functor f, Has r n, Upd r n b, a ~ FldTy r n, k ~ f (UpdTy r n b))
+           => IsRecordFunction n (a -> f b) (r -> k) True where
   fieldFunction p w s = setField p s <$> w (getField p s)
 
 instance (Has r n, FldTy r n ~ t, FromArrow r ~ False) => IsRecordFunction n r t False where
