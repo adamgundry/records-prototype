@@ -72,21 +72,21 @@ class
 -- IsRecordField instances for both functions and van Laarhoven
 -- lenses, without incoherence.  It can probably be simplified!
 
-type family FromArrow (a :: *) :: Maybe (*, *) where
-  FromArrow (x -> y) = Just '(x, y)
-  FromArrow t        = Nothing
+type family FromArrow (a :: *) :: Bool where
+  FromArrow (x -> y) = True
+  FromArrow t        = False
 
-class z ~ FromArrow x => IsRecordFunction (n :: Symbol) x y (z :: Maybe (*, *)) | n x z -> y where
+class z ~ FromArrow x => IsRecordFunction (n :: Symbol) x y (z :: Bool) | n x z -> y where
   fieldFunction :: proxy n -> x -> y
 
 instance IsRecordFunction n x y (FromArrow x) => IsRecordField n (x -> y) where
   field = fieldFunction
 
-instance (Functor f, Has r n, Upd r n b, a ~ FldTy r n, r' ~ UpdTy r n b, a ~ d, c ~ f b)
-           => IsRecordFunction n (a -> f b) (r -> f r') (Just '(d, c)) where
+instance (Functor f, Has r n, Upd r n b, a ~ FldTy r n, r' ~ UpdTy r n b)
+           => IsRecordFunction n (a -> f b) (r -> f r') True where
   fieldFunction p w s = setField p s <$> w (getField p s)
 
-instance (Has r n, FldTy r n ~ t, FromArrow r ~ Nothing) => IsRecordFunction n r t Nothing where
+instance (Has r n, FldTy r n ~ t, FromArrow r ~ False) => IsRecordFunction n r t False where
   fieldFunction = getField
 
 
@@ -271,17 +271,33 @@ t = foo (MkR not) False
 
 fooBar = foo . bar
 
+-- A composition is either interpreted as a selector function or a
+-- lens, depending on the context:
+
+u = MkU (MkR not) True
+p = (foo . foo) u
+q = view (foo . foo) u
 
 
 ------------------------------------------------------------------------------
 -- Interpreting fields as lenses
 ------------------------------------------------------------------------------
 
--- Using a newtype wrapper, we can turn any field into a van Laarhoven
--- lens by applying the `fieldLens` function.  Everything from here
--- onwards can go in libraries other than base.
+-- In this version, fields can be used directly as van Laarhoven lenses:
 
 type Lens s t a b = forall f. Functor f => (a -> f b) -> s -> f t
+
+view :: Lens s t a b -> s -> a
+view l = getConst . l Const
+
+foo_is_a_lens' :: Upd r "foo" b =>
+                 Lens r (UpdTy r "foo" b) (FldTy r "foo") b
+foo_is_a_lens' = foo
+
+
+-- Alternatively, using a newtype wrapper, we can turn any field into
+-- a van Laarhoven lens by applying the `fieldLens` function.
+-- Everything from here onwards can go in libraries other than base.
 
 newtype WrapLens n r a
   = MkWrapLens { le :: forall b . Upd r n b => Lens r (UpdTy r n b) a b }
@@ -289,25 +305,15 @@ newtype WrapLens n r a
 instance (m ~ n, a ~ FldTy r n) => IsRecordField n (WrapLens m r a) where
   field p = MkWrapLens (\ w s -> setField p s <$> w (getField p s))
 
-
-view :: Lens s t a b -> s -> a
-view = undefined
-
-
 fieldLens :: Upd r n b => WrapLens n r a -> Lens r (UpdTy r n b) a b
 fieldLens (MkWrapLens l) = l
 
 field_is_a_lens :: Upd r n b => proxy n -> Lens r (UpdTy r n b) (FldTy r n) b
 field_is_a_lens = field
 
-
 foo_is_a_lens :: Upd r "foo" b =>
                  Lens r (UpdTy r "foo" b) (FldTy r "foo") b
 foo_is_a_lens = fieldLens foo
-
-foo_is_a_lens' :: Upd r "foo" b =>
-                 Lens r (UpdTy r "foo" b) (FldTy r "foo") b
-foo_is_a_lens' = foo
 
 
 -- What if our lenses don't support type-changing update?  No problem!
