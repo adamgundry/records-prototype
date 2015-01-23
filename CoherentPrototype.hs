@@ -76,7 +76,7 @@ type family FromArrow (a :: *) :: Bool where
   FromArrow (x -> y) = True
   FromArrow t        = False
 
-class z ~ FromArrow x => IsRecordFunction (n :: Symbol) x y (z :: Bool) | n x -> y where
+class z ~ FromArrow x => IsRecordFunction (n :: Symbol) x y (z :: Bool) | n y -> x where
   fieldFunction :: proxy n -> x -> y
 
 instance IsRecordFunction n x y (FromArrow x) => IsRecordField n (x -> y) where
